@@ -27,18 +27,19 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: Set up JDK ${{env.jdk_version}}
-        uses: actions/setup-java@v3
-        with:
-          java-version: ${{env.jdk_version}}
-          distribution: 'temurin'
-          cache: 'gradle'
-
       - name: Check if deployment properties exist
         id: props_exists
         uses: andstor/file-existence-action@v2
         with:
           files: ${{ inputs.properties_file }}
+
+      - name: Set up JDK ${{env.jdk_version}}
+        if: steps.props_exists.outputs.files_exists == 'true'
+        uses: actions/setup-java@v3
+        with:
+          java-version: ${{env.jdk_version}}
+          distribution: 'temurin'
+          cache: 'gradle'
 
       - name: Read environment
         if: steps.props_exists.outputs.files_exists == 'true'
