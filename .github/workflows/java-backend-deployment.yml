@@ -10,7 +10,7 @@ on:
         required: true
         type: string
       gradle_build:
-        required: true
+        required: false
         type: string
 
 env:
@@ -55,8 +55,12 @@ jobs:
           aws-secret-access-key: ${{ secrets[env.secret_name_aws_secret_access_key] }}
           aws-region: ${{ env.aws_region }}
 
-      - name: Publish to ECR
-        if: steps.props_exists.outputs.files_exists == 'true'
+      - name: Publish to ECR using input build
+        if: steps.props_exists.outputs.files_exists == 'true' && inputs.gradle_build != ''
+        run: ${{inputs.gradle_build}} -PprojectVersion=${{env.version}} -PdockerImage=${{env.docker_image}}
+
+      - name: Publish to ECR using properties build
+        if: steps.props_exists.outputs.files_exists == 'true' && env.gradle_build != ''
         run: ${{inputs.gradle_build}} -PprojectVersion=${{env.version}} -PdockerImage=${{env.docker_image}}
 
       - name: Deploy to EKS ${{env.aws_region}}/${{env.eks_cluster_name}} from ${{env.kustomize_dir}}
