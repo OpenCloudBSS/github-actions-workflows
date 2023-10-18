@@ -9,9 +9,6 @@ on:
       properties_file:
         required: true
         type: string
-      gradle_build:
-        required: false
-        type: string
 
 env:
   jdk_version: ${{inputs.jdk_version}}
@@ -27,14 +24,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: Check if deployment properties exist
-        id: props_exists
-        uses: andstor/file-existence-action@v2
-        with:
-          files: ${{ inputs.properties_file }}
-
       - name: Set up JDK ${{env.jdk_version}}
-        if: steps.props_exists.outputs.files_exists == 'true'
         uses: actions/setup-java@v3
         with:
           java-version: ${{env.jdk_version}}
@@ -42,29 +32,21 @@ jobs:
           cache: 'gradle'
 
       - name: Read environment
-        if: steps.props_exists.outputs.files_exists == 'true'
         run: cat $prop_file >> $GITHUB_ENV
         env:
           prop_file: ${{ inputs.properties_file }}
 
       - name: Configure AWS credentials
-        if: steps.props_exists.outputs.files_exists == 'true'
         uses: aws-actions/configure-aws-credentials@v3
         with:
           aws-access-key-id: ${{ secrets[env.secret_name_aws_access_key_id] }}
           aws-secret-access-key: ${{ secrets[env.secret_name_aws_secret_access_key] }}
           aws-region: ${{ env.aws_region }}
 
-      - name: Publish to ECR using input build
-        if: steps.props_exists.outputs.files_exists == 'true' && inputs.gradle_build != ''
-        run: ${{inputs.gradle_build}} -PprojectVersion=${{env.version}} -PdockerImage=${{env.docker_image}}
-
       - name: Publish to ECR using properties build
-        if: steps.props_exists.outputs.files_exists == 'true' && env.gradle_build != ''
         run: ${{env.gradle_build}} -PprojectVersion=${{env.version}} -PdockerImage=${{env.docker_image}}
 
       - name: Deploy to EKS ${{env.aws_region}}/${{env.eks_cluster_name}} from ${{env.kustomize_dir}}
-        if: steps.props_exists.outputs.files_exists == 'true'
         run: |
           aws eks update-kubeconfig --name $eks_cluster_name
           cd $kustomize_dir
@@ -74,7 +56,7 @@ jobs:
 
       - name: Send notification to Slack
         uses: OpenCloudBSS/slack-notify-action@main
-        if: always() && steps.props_exists.outputs.files_exists == 'true'
+        if: always()
         with:
           slack_channel_id: ${{ secrets.SLACK_PR_CHANNEL_ID }}
           slack_bot_token: ${{ secrets.SLACK_BOT_TOKEN }}
