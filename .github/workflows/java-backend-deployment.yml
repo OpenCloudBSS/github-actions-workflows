@@ -54,7 +54,7 @@ jobs:
           aws eks update-kubeconfig --name $eks_cluster_name
           cd $kustomize_dir
           kustomize edit add annotation ocb/version:$version
-          kustomize edit set image app-image=$docker_image:$version
+          kustomize edit set image app-image=$docker_repository/$docker_image:$version
           kustomize edit set namespace $namespace
           kustomize build | kubectl apply -f -       
 
